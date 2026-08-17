@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Dashboard - STAR GEN</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="glow-text">📊 STAR GEN Dashboard</div>
+            <div class="subtitle">🔥 By @SATVIR_EXPLOITS</div>
+        </div>
+
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="number">{{ total_orders }}</div>
+                <div class="label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">{{ total_accounts }}</div>
+                <div class="label">Accounts Generated</div>
+            </div>
+            <div class="stat-card">
+                <div class="number">₹{{ total_revenue }}</div>
+                <div class="label">Total Revenue</div>
+            </div>
+        </div>
+
+        <div class="main-card">
+            <h2>📋 Recent Orders</h2>
+            {% if orders %}
+                {% for order_id, order in orders.items() %}
+                <div style="background:rgba(255,255,255,0.05);padding:15px;border-radius:10px;margin:10px 0;">
+                    <p><strong>Order:</strong> {{ order_id }}</p>
+                    <p><strong>Amount:</strong> ₹{{ order.amount }}</p>
+                    <p><strong>Accounts:</strong> {{ order.accounts|length }}/{{ order.accounts_to_generate }}</p>
+                    <p><strong>Status:</strong> 
+                        {% if order.status == 'completed' %}✅ Completed
+                        {% elif order.status == 'generating' %}🔄 Generating
+                        {% elif order.status == 'paid' %}💳 Paid
+                        {% else %}⏳ Pending{% endif %}
+                    </p>
+                    <p><strong>Created:</strong> {{ order.created_at }}</p>
+                    {% if order.accounts %}
+                    <button onclick="window.location.href='/download/{{ order_id }}'" class="btn-download" style="padding:8px 20px;font-size:14px;">📥 Download</button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="text-align:center;color:#666;padding:20px;">No orders yet</p>
+            {% endif %}
+        </div>
+
+        <div style="text-align:center;margin:20px 0;">
+            <a href="/" class="btn-primary" style="text-decoration:none;display:inline-block;">⬅️ Back to Generator</a>
+        </div>
+
+        <div class="footer">
+            <p>⭐ <span class="brand">STAR GEN PRO</span> • By @SATVIR_EXPLOITS</p>
+        </div>
+    </div>
+</body>
+</html>

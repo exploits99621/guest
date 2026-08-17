@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Generating - STAR GEN</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="glow-text">⚡ Generating Accounts</div>
+            <div class="subtitle">🔥 By @SATVIR_EXPLOITS</div>
+            <div class="badge">⭐ STAR GEN PRO</div>
+        </div>
+
+        <!-- Generation Card -->
+        <div class="main-card">
+            <h2>🔄 Accounts Being Generated</h2>
+            <p style="text-align:center;color:#aaa;margin:10px 0;">
+                Order ID: <strong id="orderIdDisplay">{{ order_id or 'Loading...' }}</strong>
+            </p>
+            <p style="text-align:center;color:#ffd200;font-size:18px;">
+                Total: <span id="totalAccounts">{{ total or 0 }}</span> accounts
+            </p>
+
+            <!-- Progress -->
+            <div style="margin:30px 0;">
+                <div style="display:flex;justify-content:space-between;color:#888;font-size:14px;margin-bottom:8px;">
+                    <span>Progress</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div style="width:100%;height:12px;background:rgba(255,255,255,0.1);border-radius:6px;overflow:hidden;">
+                    <div id="progressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#f7971e,#ffd200);border-radius:6px;transition:width 0.5s;"></div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div id="statusContainer" style="background:rgba(255,255,255,0.05);padding:15px;border-radius:12px;min-height:100px;">
+                <div id="statusMessage" style="text-align:center;color:#ffd200;">⏳ Starting generation...</div>
+                <div id="accountsList" style="margin-top:15px;max-height:300px;overflow-y:auto;font-size:13px;"></div>
+            </div>
+
+            <!-- Complete Section -->
+            <div id="completeSection" style="display:none;text-align:center;padding:20px;">
+                <div class="success-icon">✅</div>
+                <h2 style="color:#28a745;">Generation Complete!</h2>
+                <p style="color:#aaa;margin:10px 0;">
+                    <span id="generatedCount">0</span> accounts generated successfully
+                </p>
+                <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:20px 0;">
+                    <button onclick="downloadAccounts()" class="btn-download">📥 Download JSON</button>
+                    <button onclick="window.location.href='/'" class="btn-secondary">🔄 New Generation</button>
+                    <button onclick="window.location.href='/dashboard'" class="btn-secondary">📊 Dashboard</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>⭐ <span class="brand">STAR GEN PRO</span> • By @SATVIR_EXPLOITS</p>
+            <p>💳 Powered by FamPay Gateway</p>
+        </div>
+    </div>
+
+    <script>
+        const orderId = '{{ order_id }}';
+        const totalAccounts = parseInt('{{ total or 0 }}');
+        let checkInterval = null;
+        let isComplete = false;
+
+        function startProgressCheck() {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+
+            checkInterval = setInterval(async () => {
+                if (!orderId || orderId === 'None') {
+                    clearInterval(checkInterval);
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/get-progress/${orderId}`);
+                    const data = await response.json();
+
+                    if (data.status === 'completed') {
+                        clearInterval(checkInterval);
+                        isComplete = true;
+                        
+                        const generated = data.generated || data.total || 0;
+                        document.getElementById('progressFill').style.width = '100%';
+                        document.getElementById('progressPercent').textContent = '100%';
+                        document.getElementById('statusMessage').textContent = '✅ Generation Complete!';
+                        document.getElementById('statusMessage').style.color = '#28a745';
+                        document.getElementById('generatedCount').textContent = generated;
+                        
+                        // Show complete section
+                        document.getElementById('completeSection').style.display = 'block';
+                        document.getElementById('accountsList').innerHTML = '';
+                        return;
+                    }
+
+                    // Update progress
+                    const total = data.total || totalAccounts;
+                    const generated = data.generated || 0;
+                    const progress = total > 0 ? Math.min((generated / total) * 100, 99) : 0;
+                    
+                    document.getElementById('progressFill').style.width = progress + '%';
+                    document.getElementById('progressPercent').textContent = Math.round(progress) + '%';
+                    document.getElementById('statusMessage').textContent = `🔄 Generating... ${generated}/${total}`;
+                    
+                    // Show recent accounts
+                    if (data.accounts && data.accounts.length > 0) {
+                        const accountsList = document.getElementById('accountsList');
+                        let html = '';
+                        data.accounts.forEach((acc, index) => {
+                            html += `
+                                <div style="background:rgba(255,255,255,0.03);padding:8px 12px;border-radius:6px;margin:4px 0;display:flex;justify-content:space-between;font-size:12px;">
+                                    <span style="color:#ffd200;">#${index + 1}</span>
+                                    <span style="color:#fff;">${acc.name || 'STAR'}</span>
+                                    <span style="color:#888;">${acc.account_id || '...'}</span>
+                                </div>
+                            `;
+                        });
+                        accountsList.innerHTML = html;
+                    }
+
+                } catch (error) {
+                    console.error('Progress check error:', error);
+                }
+            }, 2000);
+        }
+
+        function downloadAccounts() {
+            if (!orderId) return;
+            window.location.href = `/download/${orderId}`;
+        }
+
+        // Start checking if order exists
+        if (orderId && orderId !== 'None') {
+            startProgressCheck();
+        } else {
+            document.getElementById('statusMessage').textContent = '❌ No order ID found';
+            document.getElementById('statusMessage').style.color = '#dc3545';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⭐ STAR GEN PRO - FamPay</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="glow-text">⭐ STAR GEN PRO</div>
+            <div class="subtitle">🔥 Verified by @SATVIR_EXPLOITS</div>
+            <div class="badge">💳 FamPay Gateway Integrated</div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="main-card">
+            <h2>🚀 Generate Star Guest Accounts</h2>
+            <div class="price-tag">₹1 = 10 Accounts</div>
+            <div class="info-text">💰 Pay via UPI - Instant Delivery</div>
+            
+            <!-- Name Settings -->
+            <div class="name-settings">
+                <h3>📝 Custom Account Settings</h3>
+                <input type="text" id="baseName" placeholder="Base Name (e.g., STAR, PRO)" value="STAR">
+                <input type="text" id="basePassword" placeholder="Base Password (e.g., MyPass)" value="STAR_TOP">
+                <div class="hint">💡 Leave empty for random names & passwords</div>
+            </div>
+            
+            <!-- Amount Selector -->
+            <div class="amount-selector">
+                <button onclick="setAmount(1)" class="amount-btn">₹1 (10)</button>
+                <button onclick="setAmount(5)" class="amount-btn">₹5 (50)</button>
+                <button onclick="setAmount(10)" class="amount-btn">₹10 (100)</button>
+                <button onclick="setAmount(25)" class="amount-btn">₹25 (250)</button>
+                <button onclick="setAmount(50)" class="amount-btn">₹50 (500)</button>
+                <button onclick="setAmount(100)" class="amount-btn">₹100 (1000)</button>
+            </div>
+            
+            <!-- Custom Amount -->
+            <div class="custom-amount">
+                <input type="number" id="customAmount" placeholder="Custom Amount (₹)" min="1">
+                <button onclick="generateOrder()" class="btn-primary">⚡ Generate QR</button>
+            </div>
+
+            <!-- QR Container -->
+            <div id="qr-container" style="display:none;" class="qr-container">
+                <div class="qr-box">
+                    <h3>📱 Scan to Pay</h3>
+                    <img id="qr-image" src="" alt="QR Code">
+                    <p><strong>Order ID:</strong> <span id="order-id"></span></p>
+                    <p><strong>Amount:</strong> ₹<span id="qr-amount"></span></p>
+                    <p><strong>UPI:</strong> <span id="upi-id"></span></p>
+                    <button onclick="openCheckout()" class="btn-checkout">🚀 Open Checkout</button>
+                    <button onclick="copyUPI()" class="btn-copy">📋 Copy UPI</button>
+                </div>
+                
+                <div id="status-container">
+                    <div id="status-message">⏳ Waiting for payment...</div>
+                    <div id="progress-bar"><div id="progress-fill"></div></div>
+                    <div id="account-status"></div>
+                </div>
+            </div>
+
+            <!-- Success Container -->
+            <div id="success-container" style="display:none;" class="success-container">
+                <div class="success-icon">✅</div>
+                <h2>Payment Successful!</h2>
+                <p id="success-message">Your accounts are being generated...</p>
+                <div id="generation-progress"></div>
+                <button onclick="downloadAccounts()" class="btn-download" id="downloadBtn" style="display:none;">📥 Download JSON</button>
+                <button onclick="resetPayment()" class="btn-secondary">🔄 New Generation</button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>⭐ <span class="brand">STAR GEN PRO</span> • By @SATVIR_EXPLOITS</p>
+            <p>💳 Powered by FamPay Gateway</p>
+        </div>
+    </div>
+
+    <script>
+        let currentOrderId = null;
+        let currentAmount = null;
+        let checkInterval = null;
+        let generatedAccounts = [];
+
+        function setAmount(amount) {
+            document.getElementById('customAmount').value = amount;
+            // Highlight selected
+            document.querySelectorAll('.amount-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        async function generateOrder() {
+            const amountInput = document.getElementById('customAmount');
+            const amount = amountInput.value.trim();
+
+            if (!amount || parseFloat(amount) <= 0) {
+                alert('⚠️ Please enter a valid amount');
+                amountInput.focus();
+                return;
+            }
+
+            const btn = document.querySelector('.btn-primary');
+            btn.textContent = '⏳ Creating order...';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/create-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: parseFloat(amount) })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    currentOrderId = data.order_id;
+                    currentAmount = data.amount;
+
+                    // Show QR
+                    document.getElementById('qr-image').src = data.qr_url;
+                    document.getElementById('order-id').textContent = data.order_id;
+                    document.getElementById('qr-amount').textContent = data.amount;
+                    document.getElementById('upi-id').textContent = data.upi_id;
+
+                    document.getElementById('qr-container').style.display = 'block';
+                    document.getElementById('success-container').style.display = 'none';
+                    
+                    // Reset status
+                    document.getElementById('status-message').textContent = '⏳ Waiting for payment...';
+                    document.getElementById('status-message').style.color = '#ffd200';
+                    document.getElementById('progress-fill').style.width = '0%';
+                    document.getElementById('account-status').textContent = '';
+                    
+                    // Start checking payment status
+                    startPaymentCheck();
+
+                    // Scroll to QR
+                    document.getElementById('qr-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('❌ Network error: ' + error.message);
+            } finally {
+                btn.textContent = '⚡ Generate QR';
+                btn.disabled = false;
+            }
+        }
+
+        function startPaymentCheck() {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+
+            let attempts = 0;
+            const maxAttempts = 120; // 10 minutes (5 sec interval)
+
+            checkInterval = setInterval(async () => {
+                attempts++;
+                
+                if (!currentOrderId) {
+                    clearInterval(checkInterval);
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/verify-order/${currentOrderId}`);
+                    const data = await response.json();
+
+                    if (data.payment_verified) {
+                        clearInterval(checkInterval);
+                        document.getElementById('status-message').textContent = '✅ Payment Verified! Generating accounts...';
+                        document.getElementById('status-message').style.color = '#28a745';
+                        document.getElementById('progress-fill').style.width = '50%';
+                        
+                        // Start generation
+                        await startGeneration();
+                        return;
+                    }
+
+                    // Update progress
+                    const progress = Math.min((attempts / maxAttempts) * 100, 95);
+                    document.getElementById('progress-fill').style.width = progress + '%';
+                    document.getElementById('status-message').textContent = `⏳ Waiting for payment... (${Math.round(progress)}%)`;
+
+                    if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        document.getElementById('status-message').textContent = '⏰ Payment timeout. Please try again.';
+                        document.getElementById('status-message').style.color = '#dc3545';
+                    }
+                } catch (error) {
+                    console.error('Check error:', error);
+                }
+            }, 5000);
+        }
+
+        async function startGeneration() {
+            const baseName = document.getElementById('baseName').value || 'STAR';
+            const basePassword = document.getElementById('basePassword').value || 'STAR_TOP';
+
+            document.getElementById('status-message').textContent = '🔄 Generating accounts...';
+            document.getElementById('status-message').style.color = '#ffd200';
+            document.getElementById('progress-fill').style.width = '70%';
+            document.getElementById('account-status').textContent = 'Please wait...';
+
+            try {
+                const response = await fetch('/generate-accounts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        order_id: currentOrderId,
+                        base_name: baseName,
+                        base_password: basePassword
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    generatedAccounts = data.accounts;
+                    document.getElementById('progress-fill').style.width = '100%';
+                    document.getElementById('status-message').textContent = `✅ ${data.count} accounts generated!`;
+                    document.getElementById('status-message').style.color = '#28a745';
+                    document.getElementById('account-status').textContent = `${data.count} accounts ready for download`;
+                    
+                    // Show success container
+                    document.getElementById('success-container').style.display = 'block';
+                    document.getElementById('success-message').textContent = `${data.count} accounts generated successfully!`;
+                    document.getElementById('downloadBtn').style.display = 'inline-block';
+                } else {
+                    throw new Error(data.error || 'Generation failed');
+                }
+            } catch (error) {
+                document.getElementById('status-message').textContent = '❌ Generation error: ' + error.message;
+                document.getElementById('status-message').style.color = '#dc3545';
+            }
+        }
+
+        function downloadAccounts() {
+            if (!currentOrderId) return;
+            window.location.href = `/download/${currentOrderId}`;
+        }
+
+        function openCheckout() {
+            if (!currentOrderId) return;
+            window.open(`https://fampaygateway.site/checkout.php?order_id=${currentOrderId}`, '_blank');
+        }
+
+        function copyUPI() {
+            const upiId = document.getElementById('upi-id').textContent;
+            if (!upiId) return;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(upiId)
+                    .then(() => alert('✅ UPI ID copied: ' + upiId))
+                    .catch(() => fallbackCopy(upiId));
+            } else {
+                fallbackCopy(upiId);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const input = document.createElement('input');
+            input.value = text;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            alert('✅ UPI ID copied: ' + text);
+        }
+
+        function resetPayment() {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+                checkInterval = null;
+            }
+            
+            document.getElementById('qr-container').style.display = 'none';
+            document.getElementById('success-container').style.display = 'none';
+            document.getElementById('customAmount').value = '';
+            document.getElementById('customAmount').focus();
+            
+            currentOrderId = null;
+            currentAmount = null;
+            generatedAccounts = [];
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Enter key support
+        document.getElementById('customAmount').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                generateOrder();
+            }
+        });
+
+        // Auto-focus on load
+        window.addEventListener('load', function() {
+            document.getElementById('customAmount').focus();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💳 Payment - STAR GEN</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="glow-text">💳 Complete Payment</div>
+            <div class="subtitle">🔥 By @SATVIR_EXPLOITS</div>
+            <div class="badge">⭐ STAR GEN PRO</div>
+        </div>
+
+        <!-- Payment Card -->
+        <div class="main-card">
+            <h2>📱 Pay via UPI</h2>
+            <p class="price-tag">₹1 = 10 Accounts</p>
+            
+            <div style="text-align:center;padding:20px;">
+                <p style="color:#aaa;margin-bottom:15px;">Scan QR code or click below to pay</p>
+                
+                <!-- QR Code from FamPay -->
+                <img id="qrImage" src="" alt="QR Code" style="max-width:200px;background:white;padding:15px;border-radius:12px;margin:10px auto;display:block;">
+                
+                <p style="color:#888;font-size:14px;margin:10px 0;">
+                    <strong>Order ID:</strong> <span id="orderIdDisplay">{{ order_id or 'Loading...' }}</span>
+                </p>
+                <p style="color:#888;font-size:14px;margin:10px 0;">
+                    <strong>Amount:</strong> ₹<span id="amountDisplay">{{ amount or '0' }}</span>
+                </p>
+                <p style="color:#888;font-size:14px;margin:10px 0;">
+                    <strong>UPI ID:</strong> <span id="upiDisplay">{{ upi_id or '9817317740@fam' }}</span>
+                </p>
+            </div>
+
+            <!-- Payment Buttons -->
+            <div style="display:flex;flex-direction:column;gap:10px;max-width:400px;margin:20px auto;">
+                <a href="{{ checkout_url or '#' }}" target="_blank" class="btn-checkout" style="text-align:center;text-decoration:none;display:block;">
+                    🚀 Open Checkout Page
+                </a>
+                <button onclick="copyUPI()" class="btn-copy">📋 Copy UPI ID</button>
+                <button onclick="window.location.href='{{ pay_url or '#' }}'" class="btn-primary" style="text-align:center;">
+                    💳 Pay Now
+                </button>
+            </div>
+
+            <!-- Status -->
+            <div id="status-container" style="margin-top:20px;padding:15px;background:rgba(255,255,255,0.05);border-radius:12px;">
+                <div id="status-message" style="text-align:center;color:#ffd200;">⏳ Waiting for payment...</div>
+                <div id="progress-bar" style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;margin-top:10px;overflow:hidden;">
+                    <div id="progress-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#f7971e,#ffd200);border-radius:3px;transition:width 1s;"></div>
+                </div>
+                <div id="account-status" style="text-align:center;font-size:14px;color:#888;margin-top:10px;"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>⭐ <span class="brand">STAR GEN PRO</span> • By @SATVIR_EXPLOITS</p>
+            <p>💳 Powered by FamPay Gateway</p>
+        </div>
+    </div>
+
+    <script>
+        // Get order details from URL or session
+        const urlParams = new URLSearchParams(window.location.search);
+        const orderId = urlParams.get('order_id') || '{{ order_id }}';
+        const amount = urlParams.get('amount') || '{{ amount }}';
+        const qrUrl = urlParams.get('qr_url') || '{{ qr_url }}';
+        const upiId = urlParams.get('upi_id') || '{{ upi_id }}';
+        const checkoutUrl = urlParams.get('checkout_url') || '{{ checkout_url }}';
+
+        // Set values
+        if (qrUrl) document.getElementById('qrImage').src = qrUrl;
+        if (orderId) document.getElementById('orderIdDisplay').textContent = orderId;
+        if (amount) document.getElementById('amountDisplay').textContent = amount;
+        if (upiId) document.getElementById('upiDisplay').textContent = upiId;
+
+        // Auto-check payment status
+        let checkInterval = null;
+        let attempts = 0;
+        const maxAttempts = 120; // 10 minutes
+
+        function startPaymentCheck() {
+            if (checkInterval) {
+                clearInterval(checkInterval);
+            }
+
+            checkInterval = setInterval(async () => {
+                attempts++;
+                
+                if (!orderId || orderId === 'None') {
+                    clearInterval(checkInterval);
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/verify-order/${orderId}`);
+                    const data = await response.json();
+
+                    if (data.payment_verified) {
+                        clearInterval(checkInterval);
+                        document.getElementById('status-message').textContent = '✅ Payment Verified! Redirecting...';
+                        document.getElementById('status-message').style.color = '#28a745';
+                        document.getElementById('progress-fill').style.width = '100%';
+                        
+                        // Redirect to generate page
+                        setTimeout(() => {
+                            window.location.href = `/generate?order_id=${orderId}`;
+                        }, 1500);
+                        return;
+                    }
+
+                    // Update progress
+                    const progress = Math.min((attempts / maxAttempts) * 100, 95);
+                    document.getElementById('progress-fill').style.width = progress + '%';
+                    document.getElementById('status-message').textContent = `⏳ Waiting for payment... (${Math.round(progress)}%)`;
+
+                    if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        document.getElementById('status-message').textContent = '⏰ Payment timeout. Please try again.';
+                        document.getElementById('status-message').style.color = '#dc3545';
+                    }
+                } catch (error) {
+                    console.error('Check error:', error);
+                }
+            }, 5000);
+        }
+
+        function copyUPI() {
+            const upiId = document.getElementById('upiDisplay').textContent;
+            if (!upiId) return;
+            
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(upiId)
+                    .then(() => alert('✅ UPI ID copied: ' + upiId))
+                    .catch(() => fallbackCopy(upiId));
+            } else {
+                fallbackCopy(upiId);
+            }
+        }
+
+        function fallbackCopy(text) {
+            const input = document.createElement('input');
+            input.value = text;
+            document.body.appendChild(input);
+            input.select();
+            document.execCommand('copy');
+            document.body.removeChild(input);
+            alert('✅ UPI ID copied: ' + text);
+        }
+
+        // Start checking immediately
+        if (orderId && orderId !== 'None') {
+            startPaymentCheck();
+        }
+    </script>
+</body>
+</html>

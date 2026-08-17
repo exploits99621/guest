@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✅ Success - STAR GEN</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="glow-text">✅ Generation Complete</div>
+            <div class="subtitle">🔥 By @SATVIR_EXPLOITS</div>
+        </div>
+
+        <div class="main-card" style="text-align:center;">
+            <div class="success-icon">✅</div>
+            <h2>Accounts Generated Successfully!</h2>
+            <p style="font-size:20px;color:#ffd200;margin:15px 0;">
+                <span id="accountCount">{{ count }}</span> Accounts
+            </p>
+            <p style="color:#aaa;">Order ID: {{ order_id }}</p>
+            
+            <div style="margin:20px 0;">
+                <button onclick="window.location.href='/download/{{ order_id }}'" class="btn-download">📥 Download JSON</button>
+                <button onclick="window.location.href='/'" class="btn-secondary">🔄 New Generation</button>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.05);padding:15px;border-radius:10px;margin:20px 0;text-align:left;">
+                <p style="color:#ffd200;">📋 File Contents:</p>
+                <pre style="color:#888;font-size:12px;max-height:200px;overflow-y:auto;">
+{
+  "order_id": "{{ order_id }}",
+  "total_accounts": {{ count }},
+  "accounts": [
+    {
+      "uid": "...",
+      "password": "...",
+      "name": "...",
+      "account_id": "..."
+    }
+  ]
+}
+                </pre>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>⭐ <span class="brand">STAR GEN PRO</span> • By @SATVIR_EXPLOITS</p>
+        </div>
+    </div>
+</body>
+</html>
